@@ -301,11 +301,11 @@ data_ini %>% group_by(n_tiles) %>% dplyr::summarise(count = n(),
                                                    max_prob = max(prob))
 
 
-data_ini <- data_ini %>% mutate(readmission_prob_group = case_when(prob>=0.28 ~ "High",
-                                                              prob>=0.20 ~ "Upper Intermediate",
-                                                              prob>=0.167 ~ "Intermediate",
-                                                              prob>=0.148 ~ "Low Intermediate",
-                                                              TRUE ~ "LOW",
+data_ini <- data_ini %>% mutate(readmission_prob_group = case_when(prob>=0.28 ~ "a.High",
+                                                              prob>=0.20 ~ "b.Upper Intermediate",
+                                                              prob>=0.167 ~ "c.Intermediate",
+                                                              prob>=0.148 ~ "d.Low Intermediate",
+                                                              TRUE ~ "e.Low",
                                                               ))
 
 write.csv(data_ini , "C:\\Users\\lelr2\\Documents\\Lillian\\Challenges\\CDC\\data_prob_final.csv")
