@@ -2,6 +2,12 @@ library(lightgbm)
 library(caret)
 library(ggplot2)
 library(tidyverse)
+library(Hmisc)
+library(ROCit)
+library(patchwork) # to plot multiple plot together
+library(pROC)
+
+
 
 # ----------------------------------------------------------------------------------------
 # 1) Getting the path of your current open file
@@ -11,6 +17,9 @@ setwd(dirname(current_path))
 
 data <- read.csv("diabetes.csv", sep = ";")
 data_ini <- read.csv("diabetes.csv", sep = ";")
+
+data_ini<- data_ini %>% mutate(target = case_when(readmitted == "<30"~ 1, TRUE ~ 0))
+  
 
 data<- data %>% mutate(age = 
                          case_when(age %in% c("[0-10)","[10-20)","[20-30)","[30-40)")~ "less_40",
@@ -27,8 +36,7 @@ data<- data %>% mutate(weight =
                                    TRUE ~ "with_weight"))
 
 
-
-#data %>% group_by(weight) %>% summarise(count = n()) 
+data %>% group_by(time_in_hospital) %>% summarise(count = n()) 
 
 
 data$diag_1 <- replace(data$diag_1, data$diag_1=='?', 'M')
@@ -265,12 +273,42 @@ data_ini$prob <- predict(model,
 
 ##save final prob 
 
-write.csv(data_ini , "C:\\Users\\lelr2\\Documents\\Lillian\\Challenges\\CDC\\data_prob.csv")
+#write.csv(data_ini , "C:\\Users\\lelr2\\Documents\\Lillian\\Challenges\\CDC\\data_prob.csv")
 
 
-train_df$prob <- predict(model, data = train_x, type = "response")
-test_df$prob  <- predict(model, data = test_x, type = "response")
+#train_df$prob <- predict(model, data = train_x, type = "response")
+#test_df$prob  <- predict(model, data = test_x, type = "response")
 
+# ----------------------------------------------------------------------------------------
+# 6) ROC +lift
+# ----------------------------------------------------------------------------------------
+
+data_roc <- rocit(data_ini$prob, data_ini$target)
+summary(data_roc)
+plot(data_roc)
+# get best cut off
+plot(data_roc)$optimal
+
+
+logit_lift_train <- gainstable(data_roc,ngroup = 20)
+
+
+# add ntiles to data_ini
+data_ini <- data_ini %>% mutate(n_tiles = ntile(prob, 20))
+data_ini %>% group_by(n_tiles) %>% dplyr::summarise(count = n(),
+                                                   target = sum(target),
+                                                   min_prob = min(prob),
+                                                   max_prob = max(prob))
+
+
+data_ini <- data_ini %>% mutate(readmission_prob_group = case_when(prob>=0.28 ~ "High",
+                                                              prob>=0.20 ~ "Upper Intermediate",
+                                                              prob>=0.167 ~ "Intermediate",
+                                                              prob>=0.148 ~ "Low Intermediate",
+                                                              TRUE ~ "LOW",
+                                                              ))
+
+write.csv(data_ini , "C:\\Users\\lelr2\\Documents\\Lillian\\Challenges\\CDC\\data_prob_final.csv")
 
 
 # ----------------------------------------------------------------------------------------
@@ -298,5 +336,4 @@ discrimination_slope <- function(split_name,df_prob_real){
   return(coef_discrim)
 }
 
-discrimination_slope("Train", train_df)
-discrimination_slope("Test", test_df)
+discrimination_slope("Total data", dat_ini)
